@@ -35,8 +35,8 @@ export async function simulateTransaction(
       console.log(chalk.green('Simulation successful'));
       console.log(chalk.gray(`  VM status: ${simulationResult.vm_status}`));
     } else {
-      console.log(chalk.red('Simulation failed'));
-      console.log(chalk.red(`  VM status: ${simulationResult.vm_status}`));
+      console.error(chalk.red('Simulation failed'));
+      console.error(chalk.red(`  VM status: ${simulationResult.vm_status}`));
     }
 
     return {
@@ -130,7 +130,7 @@ export async function executeTransaction(
       if (simResult.success) {
         console.log(chalk.green.bold('Simulation successful (dry-run mode)'));
       } else {
-        console.log(chalk.red.bold('Simulation failed (dry-run mode)'));
+        console.error(chalk.red.bold('Simulation failed (dry-run mode)'));
         throw new Error(`Simulation failed: ${simResult.vmStatus}`);
       }
       return null;
@@ -166,14 +166,14 @@ export async function executeTransaction(
     }
     console.log(chalk.gray(`  VM Status: ${result.vmStatus}`));
   } else {
-    console.log(chalk.red.bold('Transaction failed'));
+    console.error(chalk.red.bold('Transaction failed'));
     if (options.network) {
       const explorerUrl = getExplorerUrl(options.network, `txn/${result.hash}`);
-      console.log(chalk.red(`  ${explorerUrl}`));
+      console.error(chalk.red(`  ${explorerUrl}`));
     } else {
-      console.log(chalk.red(`  Hash: ${result.hash}`));
+      console.error(chalk.red(`  Hash: ${result.hash}`));
     }
-    console.log(chalk.red(`  VM Status: ${result.vmStatus}`));
+    console.error(chalk.red(`  VM Status: ${result.vmStatus}`));
   }
 
   return result;
