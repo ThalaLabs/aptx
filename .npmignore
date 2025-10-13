@@ -1,0 +1,42 @@
+# Source files
+src/
+*.ts
+!*.d.ts
+
+# Config files
+tsconfig.json
+.gitignore
+
+# Development
+node_modules/
+.pnpm-store
+pnpm-lock.yaml
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Testing
+__tests__/
+*.test.ts
+*.spec.ts
+coverage/
+
+# Git
+.git/
+.gitattributes
+
+# Changesets
+.changeset/
+
+# Temporary files
+tmp.json
+*.tmp
