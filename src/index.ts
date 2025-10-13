@@ -5,7 +5,7 @@ import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import { loadProfile } from './profiles.js';
 import { parseTransactionJson } from './parser.js';
 import { executeTransaction } from './transaction.js';
-import { detectNetwork } from './utils.js';
+import { detectNetwork, readStdin } from './utils.js';
 import chalk from 'chalk';
 
 const program = new Command();
@@ -18,7 +18,7 @@ program
 program
   .command('submit')
   .description('Submit a transaction from a JSON payload')
-  .requiredOption('--payload <path>', 'Path to transaction JSON file')
+  .option('--payload <path>', 'Path to transaction JSON file or "-" for stdin (default: stdin)')
   .requiredOption('--profile <name>', 'Profile name (from .aptos/config.yaml)')
   .option('--fullnode <url>', 'Override fullnode URL from profile')
   .option('--force', 'Submit transaction even if simulation fails')
@@ -50,9 +50,18 @@ program
       const config = new AptosConfig({ fullnode });
       const aptos = new Aptos(config);
 
+      // Get payload input - from file, stdin (via '-'), or default stdin
+      let payloadInput: string;
+      if (!options.payload || options.payload === '-') {
+        console.log(chalk.blue('\nReading transaction from stdin...'));
+        payloadInput = await readStdin();
+      } else {
+        console.log(chalk.blue(`\nParsing transaction: ${options.payload}`));
+        payloadInput = options.payload;
+      }
+
       // Parse transaction JSON
-      console.log(chalk.blue(`\nParsing transaction: ${options.payload}`));
-      const entryFunction = parseTransactionJson(options.payload);
+      const entryFunction = parseTransactionJson(payloadInput);
 
       // Execute transaction
       const result = await executeTransaction(aptos, signer, entryFunction, {

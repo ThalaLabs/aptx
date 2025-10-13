@@ -51,3 +51,26 @@ export function getExplorerUrl(network: NetworkChoice, path: string): string {
 
   return `https://explorer.aptoslabs.com/${path}?network=${networkParam}`;
 }
+
+/**
+ * Read data from stdin
+ */
+export async function readStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+
+    process.stdin.setEncoding('utf8');
+
+    process.stdin.on('data', (chunk) => {
+      data += chunk;
+    });
+
+    process.stdin.on('end', () => {
+      resolve(data.trim());
+    });
+
+    process.stdin.on('error', (error) => {
+      reject(error);
+    });
+  });
+}

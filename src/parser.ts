@@ -8,14 +8,23 @@ interface JsonTransactionPayload {
 }
 
 /**
- * Parse a JSON transaction file and convert it to InputEntryFunctionData format
+ * Parse a JSON transaction from a file path or JSON string
  */
-export function parseTransactionJson(filePath: string): InputEntryFunctionData {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Transaction file not found: ${filePath}`);
+export function parseTransactionJson(input: string): InputEntryFunctionData {
+  let fileContent: string;
+
+  // Check if input is a JSON string (starts with '{' or '[') or a file path
+  if (input.trim().startsWith('{') || input.trim().startsWith('[')) {
+    // Input is a JSON string
+    fileContent = input;
+  } else {
+    // Input is a file path
+    if (!fs.existsSync(input)) {
+      throw new Error(`Transaction file not found: ${input}`);
+    }
+    fileContent = fs.readFileSync(input, 'utf8');
   }
 
-  const fileContent = fs.readFileSync(filePath, 'utf8');
   let payload: JsonTransactionPayload;
 
   try {
