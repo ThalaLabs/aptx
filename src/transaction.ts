@@ -120,39 +120,64 @@ export async function executeTransaction(
   console.log(chalk.gray(`  Args: ${JSON.stringify(entryFunction.functionArguments)}`));
   console.log('');
 
-  // Always simulate unless --force is used
-  if (!options.force || options.dryRun) {
-    const simResult = await simulateTransaction(aptos, signer, entryFunction);
-    console.log('');
+  // Always simulate
+  const simResult = await simulateTransaction(aptos, signer, entryFunction);
+  console.log('');
 
-    // If dry-run mode, exit after simulation
-    if (options.dryRun) {
-      if (simResult.success) {
-        console.log(chalk.green.bold('Simulation successful (dry-run mode)'));
-      } else {
-        console.error(chalk.red.bold('Simulation failed (dry-run mode)'));
-        throw new Error(`Simulation failed: ${simResult.vmStatus}`);
-      }
-      return null;
-    }
-
-    // If simulation failed and --force not used, abort
-    if (!simResult.success && !options.force) {
+  // If dry-run mode, exit after simulation
+  if (options.dryRun) {
+    if (simResult.success) {
+      console.log(chalk.green.bold('Simulation successful (dry-run mode)'));
+    } else {
+      console.error(chalk.red.bold('Simulation failed (dry-run mode)'));
       throw new Error(`Simulation failed: ${simResult.vmStatus}`);
     }
+    return null;
+  }
 
-    // If simulation failed but --force is used, warn and continue
-    if (!simResult.success && options.force) {
-      console.log(chalk.yellow('Simulation failed but continuing due to --force flag'));
-      console.log('');
-    }
-  } else {
-    console.log(chalk.yellow('Skipping simulation (--force flag)'));
+  // If simulation failed and --force not used, abort
+  if (!simResult.success && !options.force) {
+    throw new Error(`Simulation failed: ${simResult.vmStatus}`);
+  }
+
+  // If simulation failed but --force is used, warn and continue
+  if (!simResult.success && options.force) {
+    console.log(chalk.yellow('Simulation failed but continuing due to --force flag'));
     console.log('');
   }
 
   // Submit the transaction
-  const result = await submitTransaction(aptos, signer, entryFunction);
+  let result: TransactionResult;
+  try {
+    result = await submitTransaction(aptos, signer, entryFunction);
+  } catch (error) {
+    // If an exception is thrown during submission/waiting, try to extract the hash
+    // and show the explorer link. Return a failed TransactionResult instead of re-throwing
+    // to avoid duplicate error messages.
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const hashMatch = errorMessage.match(/0x[a-fA-F0-9]{64}/);
+
+    if (hashMatch) {
+      const hash = hashMatch[0];
+      console.error(chalk.red.bold('\nTransaction failed'));
+      if (options.network) {
+        const explorerUrl = getExplorerUrl(options.network, `txn/${hash}`);
+        console.error(chalk.red(`  ${explorerUrl}`));
+      } else {
+        console.error(chalk.red(`  Hash: ${hash}`));
+      }
+      console.error(chalk.red(`  ${errorMessage}`));
+
+      // Return a failed result instead of throwing
+      return {
+        success: false,
+        hash,
+        vmStatus: errorMessage,
+      };
+    }
+    // If we couldn't extract the hash, re-throw the original error
+    throw error;
+  }
 
   // Display result
   console.log('');
