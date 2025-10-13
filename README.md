@@ -18,16 +18,6 @@ Lightweight CLI for simulating and submitting Aptos transactions.
 npm install -g @thalalabs/aptx
 ```
 
-Or for local development:
-
-```bash
-git clone <repo>
-cd aptos-tx
-npm install
-npm run build
-npm link
-```
-
 ## Usage
 
 ### Basic Usage (with simulation)
