@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
+import { AccountAddress, Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import { loadProfile } from './profiles.js';
 import { parseTransactionJson } from './parser.js';
 import { executeTransaction } from './transaction.js';
@@ -19,8 +19,9 @@ program
   .command('submit')
   .description('Submit a transaction from a JSON payload')
   .option('--payload <path>', 'Path to transaction JSON file or "-" for stdin (default: stdin)')
-  .requiredOption('--profile <name>', 'Profile name (from .aptos/config.yaml)')
-  .option('--fullnode <url>', 'Override fullnode URL from profile')
+  .option('--profile <name>', 'Profile name (from .aptos/config.yaml)')
+  .option('--address <address>', 'Account address (for simulation without profile)')
+  .option('--fullnode <url>', 'Override fullnode URL from profile or specify for address-only mode')
   .option('--force', 'Submit transaction even if simulation fails')
   .option('--dry-run', 'Only simulate the transaction without submitting')
   .option('--source <source>', 'Config source: aptos or movement', 'aptos')
@@ -28,16 +29,55 @@ program
     try {
       console.log(chalk.bold.cyan('aptx - Aptos Transaction Executor\n'));
 
-      // Load profile
-      console.log(chalk.blue(`Loading profile: ${options.profile}`));
-      const { signer, fullnode: profileFullnode, address } = loadProfile(
-        options.profile,
-        options.source as 'aptos' | 'movement'
-      );
-      console.log(chalk.gray(`  Address: ${address}`));
+      // Validation: require at least one of --profile or --address
+      if (!options.profile && !options.address) {
+        throw new Error('Either --profile or --address must be provided');
+      }
 
-      // Use custom fullnode if provided
-      const fullnode = options.fullnode || profileFullnode;
+      // Validation: require --profile for non-dry-run (need private key to submit)
+      if (!options.dryRun && !options.profile) {
+        throw new Error('--profile is required for transaction submission (use --dry-run for simulation-only)');
+      }
+
+      // Validation: require --fullnode if using --address without --profile
+      if (options.address && !options.profile && !options.fullnode) {
+        throw new Error('--fullnode is required when using --address without --profile');
+      }
+
+      // Load profile or address
+      let signer = null;
+      let sender: AccountAddress;
+      let fullnode: string;
+
+      if (options.profile) {
+        console.log(chalk.blue(`Loading profile: ${options.profile}`));
+        const profile = loadProfile(
+          options.profile,
+          options.source as 'aptos' | 'movement'
+        );
+        signer = profile.signer;
+        sender = profile.signer.accountAddress;
+        fullnode = options.fullnode || profile.fullnode;
+
+        console.log(chalk.gray(`  Address: ${profile.address}`));
+
+        // If both --profile and --address provided, validate they match
+        if (options.address) {
+          const providedAddress = AccountAddress.from(options.address);
+          if (providedAddress.toString() !== sender.toString()) {
+            throw new Error(
+              `Address mismatch: --address (${providedAddress.toString()}) does not match profile address (${sender.toString()})`
+            );
+          }
+        }
+      } else {
+        // Address-only mode (dry-run simulation)
+        console.log(chalk.blue('Using address-only mode (simulation only)'));
+        sender = AccountAddress.from(options.address);
+        fullnode = options.fullnode;
+        console.log(chalk.gray(`  Address: ${sender.toString()}`));
+      }
+
       console.log(chalk.gray(`  Fullnode: ${fullnode}`));
 
       // Detect network from fullnode URL
@@ -64,7 +104,7 @@ program
       const entryFunction = parseTransactionJson(payloadInput);
 
       // Execute transaction
-      const result = await executeTransaction(aptos, signer, entryFunction, {
+      const result = await executeTransaction(aptos, sender, signer, entryFunction, {
         dryRun: options.dryRun || false,
         force: options.force || false,
         network,

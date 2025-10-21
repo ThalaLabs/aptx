@@ -1,4 +1,4 @@
-import { Account, Aptos, InputEntryFunctionData } from '@aptos-labs/ts-sdk';
+import { Account, AccountAddress, Aptos, InputEntryFunctionData } from '@aptos-labs/ts-sdk';
 import chalk from 'chalk';
 import { NetworkChoice, getExplorerUrl } from './utils.js';
 
@@ -13,7 +13,7 @@ export interface TransactionResult {
  */
 export async function simulateTransaction(
   aptos: Aptos,
-  signer: Account,
+  sender: AccountAddress,
   entryFunction: InputEntryFunctionData
 ): Promise<TransactionResult> {
   console.log(chalk.blue('Simulating transaction...'));
@@ -21,13 +21,12 @@ export async function simulateTransaction(
   try {
     // Build the transaction
     const transaction = await aptos.transaction.build.simple({
-      sender: signer.accountAddress,
+      sender: sender,
       data: entryFunction,
     });
 
     // Simulate the transaction
     const [simulationResult] = await aptos.transaction.simulate.simple({
-      signerPublicKey: signer.publicKey,
       transaction,
     });
 
@@ -102,7 +101,8 @@ export async function submitTransaction(
  */
 export async function executeTransaction(
   aptos: Aptos,
-  signer: Account,
+  sender: AccountAddress,
+  signer: Account | null,
   entryFunction: InputEntryFunctionData,
   options: {
     dryRun: boolean;
@@ -113,7 +113,7 @@ export async function executeTransaction(
   // Display transaction details
   console.log(chalk.bold('\nTransaction Details:'));
   console.log(chalk.gray(`  Function: ${entryFunction.function}`));
-  console.log(chalk.gray(`  Sender: ${signer.accountAddress.toString()}`));
+  console.log(chalk.gray(`  Sender: ${sender.toString()}`));
   if (entryFunction.typeArguments && entryFunction.typeArguments.length > 0) {
     console.log(chalk.gray(`  Type Args: ${entryFunction.typeArguments.join(', ')}`));
   }
@@ -121,7 +121,7 @@ export async function executeTransaction(
   console.log('');
 
   // Always simulate
-  const simResult = await simulateTransaction(aptos, signer, entryFunction);
+  const simResult = await simulateTransaction(aptos, sender, entryFunction);
   console.log('');
 
   // If dry-run mode, exit after simulation
@@ -144,6 +144,11 @@ export async function executeTransaction(
   if (!simResult.success && options.force) {
     console.log(chalk.yellow('Simulation failed but continuing due to --force flag'));
     console.log('');
+  }
+
+  // Check if we have a signer for submission
+  if (!signer) {
+    throw new Error('Cannot submit transaction without a profile (private key required for signing)');
   }
 
   // Submit the transaction
