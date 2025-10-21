@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@thalalabs/aptx",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Lightweight CLI for simulating and submitting Aptos transactions",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
