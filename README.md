@@ -5,6 +5,7 @@ Lightweight CLI for simulating and submitting Aptos transactions.
 ## Features
 
 - Simple transaction submission from JSON payloads
+- Fetch transaction payloads from the blockchain
 - Support for stdin input (pipe JSON directly)
 - Transaction simulation before submission (with --force to bypass)
 - Dry-run mode to test without submitting
@@ -92,6 +93,31 @@ aptos init --profile my-profile
 Profiles are stored in `.aptos/config.yaml` in your current directory.
 
 ## Command Reference
+
+### `fetch`
+
+Fetch a transaction payload from the blockchain.
+
+**Options:**
+- `--txn <hash_or_version>` - Transaction hash (0x...) or version number (required)
+- `--fullnode <url>` - Fullnode URL (required)
+- `--output <path>` - Output file path (optional, defaults to stdout)
+
+**Examples:**
+
+```bash
+# Fetch by transaction hash
+aptx fetch --txn 0x1234... --fullnode https://api.mainnet.aptoslabs.com/v1
+
+# Fetch by version number
+aptx fetch --txn 12345678 --fullnode https://api.mainnet.aptoslabs.com/v1
+
+# Save to file
+aptx fetch --txn 0x1234... --fullnode https://api.mainnet.aptoslabs.com/v1 --output transaction.json
+
+# Fetch and re-submit workflow
+aptx fetch --txn 0x1234... --fullnode https://api.mainnet.aptoslabs.com/v1 | aptx submit --profile my-profile
+```
 
 ### `submit`
 
