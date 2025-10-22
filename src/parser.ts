@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { InputEntryFunctionData, MoveFunctionId } from '@aptos-labs/ts-sdk';
 
-interface JsonTransactionPayload {
+export interface JsonTransactionPayload {
   function_id: string;
   type_args: string[];
   args: Array<{ type: string; value: any }>;

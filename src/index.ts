@@ -5,6 +5,7 @@ import { AccountAddress, Aptos, AptosConfig } from '@aptos-labs/ts-sdk';
 import { loadProfile } from './profiles.js';
 import { parseTransactionJson } from './parser.js';
 import { executeTransaction } from './transaction.js';
+import { fetchTransaction } from './fetch.js';
 import { detectNetwork, readStdin } from './utils.js';
 import chalk from 'chalk';
 
@@ -119,6 +120,41 @@ program
       } else {
         process.exit(1);
       }
+    } catch (error) {
+      console.error(chalk.red.bold('\nError:'));
+      console.error(chalk.red(`  ${error instanceof Error ? error.message : error}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('fetch')
+  .description('Fetch a transaction payload from the blockchain')
+  .requiredOption('--txn <hash_or_version>', 'Transaction hash (0x...) or version number')
+  .requiredOption('--fullnode <url>', 'Fullnode URL')
+  .option('--output <path>', 'Output file path (default: stdout)')
+  .action(async (options) => {
+    try {
+      console.error(chalk.bold.cyan('aptx - Aptos Transaction Fetcher\n'));
+
+      const fullnode = options.fullnode;
+      console.error(chalk.gray(`  Fullnode: ${fullnode}`));
+
+      // Detect network from fullnode URL
+      const network = detectNetwork(fullnode);
+      if (network) {
+        console.error(chalk.gray(`  Network: ${network}`));
+      }
+      console.error('');
+
+      // Initialize Aptos client
+      const config = new AptosConfig({ fullnode });
+      const aptos = new Aptos(config);
+
+      // Fetch the transaction
+      await fetchTransaction(aptos, options.txn, options.output);
+
+      process.exit(0);
     } catch (error) {
       console.error(chalk.red.bold('\nError:'));
       console.error(chalk.red(`  ${error instanceof Error ? error.message : error}`));
